@@ -48,6 +48,10 @@ export default function Board() {
   const [elapsedMs, setElapsedMs] = useState(0);
   const [counted, setCounted] = useState(false);
   const [autoFinishing, setAutoFinishing] = useState(false);
+  // While dragging from a tableau column, its root is lifted above every
+  // other column so the dragged stack cannot pass underneath a neighbour.
+  const [dragCol, setDragCol] = useState<number | null>(null);
+  const dragColTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [shake, setShake] = useState<{ id: string; nonce: number } | null>(null);
   const [statsOpen, setStatsOpen] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -164,6 +168,9 @@ export default function Board() {
 
   const handleDragEnd = useCallback(
     (from: DragSource, point: { x: number; y: number }) => {
+      // Keep the source column lifted through the snap-back animation.
+      if (dragColTimer.current) clearTimeout(dragColTimer.current);
+      dragColTimer.current = setTimeout(() => setDragCol(null), 600);
       const current = gameRef.current;
       if (!current || current.won || autoFinishing) return;
       const x = point.x - window.scrollX;
@@ -271,11 +278,12 @@ export default function Board() {
         row === 0
           ? "0px"
           : `calc(var(--card-h) * ${(below.faceUp ? FU_OFFSET : FD_OFFSET).toFixed(2)})`;
+      const zBase = zOf(card.id, row);
       node = (
         <CardView
           key={card.id}
           card={card}
-          z={zOf(card.id, row)}
+          z={row === 0 && col === dragCol ? zBase + 10_000_000 : zBase}
           top={top}
           shaking={shake?.id === card.id}
           draggable={card.faceUp && interactive}
@@ -284,6 +292,10 @@ export default function Board() {
               ? () => handleTap({ pile: "tableau", index: col, cardIndex: row }, card.id)
               : undefined
           }
+          onDragBegin={() => {
+            if (dragColTimer.current) clearTimeout(dragColTimer.current);
+            setDragCol(col);
+          }}
           onDragEnd={(pt) =>
             handleDragEnd({ pile: "tableau", index: col, cardIndex: row }, pt)
           }
