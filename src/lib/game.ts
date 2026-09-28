@@ -15,6 +15,15 @@ export type TapLocation =
   | { pile: "waste" }
   | { pile: "tableau"; index: number; cardIndex: number };
 
+export type DragSource =
+  | { pile: "waste" }
+  | { pile: "foundation"; index: number }
+  | { pile: "tableau"; index: number; cardIndex: number };
+
+export type DropTarget =
+  | { kind: "foundation"; index: number }
+  | { kind: "tableau"; index: number };
+
 export function deal(): GameState {
   const deck = newShuffledDeck();
   const tableau: Card[][] = [[], [], [], [], [], [], []];
@@ -196,6 +205,65 @@ function bestTableauTarget(s: GameState, card: Card, fromIndex: number): number 
     if (cardIndex > 0) return empty; // frees a card underneath
   }
   return -1;
+}
+
+/** Apply a drag from `from` onto `to`; null when the drop is illegal. */
+export function dragMove(
+  s0: GameState,
+  from: DragSource,
+  to: DropTarget
+): GameState | null {
+  // Resolve the cards being moved (top card only, except tableau stacks).
+  let moving: Card[];
+  if (from.pile === "waste") {
+    if (s0.waste.length === 0) return null;
+    moving = [s0.waste[s0.waste.length - 1]];
+  } else if (from.pile === "foundation") {
+    const pile = s0.foundations[from.index];
+    if (pile.length === 0) return null;
+    moving = [pile[pile.length - 1]];
+  } else {
+    const pile = s0.tableau[from.index];
+    const card = pile[from.cardIndex];
+    if (!card || !card.faceUp) return null;
+    moving = pile.slice(from.cardIndex);
+  }
+  const lead = moving[0];
+
+  if (to.kind === "foundation") {
+    if (moving.length !== 1) return null;
+    if (from.pile === "foundation" && from.index === to.index) return null;
+    if (!canPlaceOnFoundation(lead, s0.foundations[to.index])) return null;
+    const s = clone(s0);
+    if (from.pile === "waste") s.foundations[to.index].push(s.waste.pop()!);
+    else if (from.pile === "foundation")
+      s.foundations[to.index].push(s.foundations[from.index].pop()!);
+    else {
+      s.foundations[to.index].push(s.tableau[from.index].pop()!);
+      flipExposed(s, from.index);
+    }
+    addScore(s, 10);
+    s.moves++;
+    checkWin(s);
+    return s;
+  }
+
+  if (from.pile === "tableau" && from.index === to.index) return null;
+  if (!canPlaceOnTableau(lead, s0.tableau[to.index])) return null;
+  const s = clone(s0);
+  if (from.pile === "waste") {
+    s.tableau[to.index].push(s.waste.pop()!);
+    addScore(s, 5);
+  } else if (from.pile === "foundation") {
+    s.tableau[to.index].push(s.foundations[from.index].pop()!);
+    addScore(s, -15);
+  } else {
+    const stack = s.tableau[from.index].splice(from.cardIndex);
+    s.tableau[to.index].push(...stack);
+    flipExposed(s, from.index);
+  }
+  s.moves++;
+  return s;
 }
 
 /** True when every tableau card is face up — the auto-finish condition. */

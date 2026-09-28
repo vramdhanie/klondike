@@ -14,8 +14,10 @@ Live at [klondike.vincentramdhanie.com](https://klondike.vincentramdhanie.com).
 
 ## How it plays
 
-- **Tap a card and it makes the obvious move** — foundation first, then the
-  best tableau move (kings only go to an empty column when that frees a
+- **Drag and drop** any face-up card (a tableau card carries its stack, and
+  a foundation card can come back down); an illegal drop snaps back.
+- **Or tap a card and it makes the obvious move** — foundation first, then
+  the best tableau move (kings only go to an empty column when that frees a
   card). No move: the card shakes.
 - Tap the stock to draw one card; tap it again when empty to recycle the
   waste (−100 points, standard scoring).

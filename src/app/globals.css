@@ -72,7 +72,7 @@ body {
   grid-column: 6;
 }
 .column {
-  height: calc(var(--card-h) * 5.4);
+  height: calc(var(--card-h) * 6.5);
 }
 .tableau {
   display: grid;
@@ -107,6 +107,7 @@ body {
   height: var(--card-h);
   perspective: 600px;
   cursor: pointer;
+  touch-action: none;
 }
 .card-inner {
   position: relative;
