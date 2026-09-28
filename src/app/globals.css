@@ -147,12 +147,27 @@ body {
 .card-corner span:last-child {
   font-size: calc(var(--card-w) * 0.26);
 }
+/* The big pip sits centred in the space left under the corner label. */
 .card-pip {
   position: absolute;
-  right: calc(var(--card-w) * 0.06);
-  bottom: calc(var(--card-w) * 0.02);
+  inset: calc(var(--card-w) * 0.38) 0 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: calc(var(--card-w) * 0.62);
   line-height: 1;
+}
+@media (max-width: 600px) {
+  .card-corner {
+    font-size: calc(var(--card-w) * 0.38);
+  }
+  .card-corner span:last-child {
+    font-size: calc(var(--card-w) * 0.34);
+  }
+  .card-pip {
+    inset: calc(var(--card-w) * 0.46) 0 0 0;
+    font-size: calc(var(--card-w) * 0.56);
+  }
 }
 .card-back {
   background: #2233b0
@@ -260,6 +275,37 @@ body {
   font-weight: 700;
   cursor: pointer;
 }
+.level-block {
+  margin-bottom: 18px;
+}
+.level-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.level-badge {
+  font-weight: 800;
+  color: var(--felt);
+  font-size: 1.05rem;
+}
+.level-caption {
+  font-size: 0.8rem;
+  color: #5a6572;
+  font-variant-numeric: tabular-nums;
+}
+.progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #e6ebf0;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--felt-light), var(--felt));
+}
+
 .win-suits {
   font-size: 2rem;
   display: flex;

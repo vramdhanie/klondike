@@ -196,7 +196,8 @@ export default function Board() {
   }, [autoFinishing, counted, elapsedMs, persist, setGameNow]);
 
   const newGame = useCallback(() => {
-    if (gameRef.current && counted && !gameRef.current.won) setStats(recordLoss());
+    if (gameRef.current && counted && !gameRef.current.won)
+      setStats(recordLoss(gameRef.current.score));
     const fresh = deal();
     historyRef.current = [];
     setHistoryLen(0);

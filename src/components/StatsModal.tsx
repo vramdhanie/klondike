@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 
+import { levelProgress } from "@/lib/levels";
 import type { Stats } from "@/lib/stats";
 
 function formatTime(ms: number | null): string {
@@ -14,6 +15,7 @@ export default function StatsModal({ stats, onClose }: { stats: Stats; onClose: 
   const winRate = stats.dealt > 0 ? Math.round((stats.won / stats.dealt) * 100) : 0;
   const avgWinTime =
     stats.won > 0 ? formatTime(Math.round(stats.totalWinTimeMs / stats.won)) : "—";
+  const progress = levelProgress(stats.totalPoints);
 
   const rows: [string, string | number][] = [
     ["Games played", stats.dealt],
@@ -26,6 +28,7 @@ export default function StatsModal({ stats, onClose }: { stats: Stats; onClose: 
     ["Average win time", avgWinTime],
     ["Fewest moves", stats.bestMoves ?? "—"],
     ["High score", stats.highScore],
+    ["Lifetime points", stats.totalPoints.toLocaleString()],
   ];
 
   return (
@@ -42,6 +45,23 @@ export default function StatsModal({ stats, onClose }: { stats: Stats; onClose: 
         onClick={(e) => e.stopPropagation()}
       >
         <h2>Statistics</h2>
+        <div className="level-block">
+          <div className="level-row">
+            <span className="level-badge">Level {progress.level}</span>
+            <span className="level-caption">
+              {progress.into.toLocaleString()} / {progress.span.toLocaleString()} to level{" "}
+              {progress.level + 1}
+            </span>
+          </div>
+          <div className="progress-track">
+            <motion.div
+              className="progress-fill"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress.fraction * 100}%` }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            />
+          </div>
+        </div>
         <dl className="stats-list">
           {rows.map(([label, value]) => (
             <div key={label}>

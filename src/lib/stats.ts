@@ -8,6 +8,8 @@ export interface Stats {
   bestMoves: number | null;
   highScore: number;
   totalWinTimeMs: number;
+  /** Lifetime points: each deal's final score, banked when the deal ends. */
+  totalPoints: number;
 }
 
 const STATS_KEY = "klondike.stats.v1";
@@ -22,6 +24,7 @@ export const emptyStats: Stats = {
   bestMoves: null,
   highScore: 0,
   totalWinTimeMs: 0,
+  totalPoints: 0,
 };
 
 export function loadStats(): Stats {
@@ -50,11 +53,12 @@ export function recordDeal(): Stats {
   return stats;
 }
 
-/** The current deal was abandoned without winning. */
-export function recordLoss(): Stats {
+/** The current deal was abandoned without winning; its score still banks. */
+export function recordLoss(score: number): Stats {
   const stats = loadStats();
   stats.lost++;
   stats.currentStreak = 0;
+  stats.totalPoints += score;
   saveStats(stats);
   return stats;
 }
@@ -63,6 +67,7 @@ export function recordWin(timeMs: number, moves: number, score: number): Stats {
   const stats = loadStats();
   stats.won++;
   stats.currentStreak++;
+  stats.totalPoints += score;
   stats.bestStreak = Math.max(stats.bestStreak, stats.currentStreak);
   stats.totalWinTimeMs += timeMs;
   if (stats.bestTimeMs === null || timeMs < stats.bestTimeMs) stats.bestTimeMs = timeMs;
