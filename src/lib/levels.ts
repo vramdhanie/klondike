@@ -1,12 +1,14 @@
 /**
  * Levels are earned with lifetime points (each deal's final score is banked
  * when the deal ends). Level 1 costs 1000 points; the cumulative requirement
- * grows as n·log n so each level asks a little more than the last:
- *   T(n) = 1000 · n · log2(n + 1)   →  1000, 3170, 6000, 9288, 12925, …
+ * grows on a binary-log curve so each level asks slightly more than the last:
+ *   T(n) = 46.57·n·log2(n) + 106.8·n + 893.2  →  1000, 1200, 1435, 1693, …
  */
 export function levelThreshold(level: number): number {
   if (level <= 0) return 0;
-  return Math.round(1000 * level * Math.log2(level + 1));
+  return Math.round(
+    46.57 * level * Math.log2(level) + 106.8 * level + 893.2
+  );
 }
 
 export function levelForPoints(points: number): number {
