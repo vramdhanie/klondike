@@ -1,0 +1,274 @@
+@import "tailwindcss";
+
+:root {
+  --felt: #14622e;
+  --felt-light: #1d7a3c;
+  --card-w: clamp(42px, calc((100vw - 60px) / 7), 96px);
+  --card-h: calc(var(--card-w) * 1.4);
+  --card-radius: calc(var(--card-w) * 0.09);
+  --line: rgba(255, 255, 255, 0.35);
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: radial-gradient(ellipse at 50% 20%, var(--felt-light), var(--felt) 70%);
+  color: #fff;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior: none;
+}
+
+.board {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px 8px 96px;
+}
+
+.board-loading {
+  display: flex;
+  justify-content: center;
+  padding-top: 40vh;
+  font-size: 1.1rem;
+  opacity: 0.8;
+}
+
+/* ---- top bar ---- */
+.topbar {
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0 14px;
+  text-align: center;
+}
+.topbar-label {
+  display: block;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+.topbar-value {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- piles ---- */
+.top-row {
+  display: grid;
+  grid-template-columns: repeat(7, var(--card-w));
+  justify-content: space-between;
+  margin-bottom: calc(var(--card-h) * 0.22);
+}
+.pile,
+.column {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+}
+.pile-waste {
+  grid-column: 6;
+}
+.column {
+  height: calc(var(--card-h) * 5.4);
+}
+.tableau {
+  display: grid;
+  grid-template-columns: repeat(7, var(--card-w));
+  justify-content: space-between;
+}
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--line);
+  border-radius: var(--card-radius);
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--card-w) * 0.5);
+  font-weight: 700;
+  color: var(--line);
+  height: var(--card-h);
+}
+.placeholder-recycle {
+  font-size: calc(var(--card-w) * 0.45);
+  cursor: pointer;
+}
+
+/* ---- cards ---- */
+.card-slot {
+  position: absolute;
+  left: 0;
+  width: var(--card-w);
+  height: var(--card-h);
+  perspective: 600px;
+  cursor: pointer;
+}
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+.card-face {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--card-radius);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.card-front {
+  background: #fbfbf4;
+  border: 1px solid #c8c8bd;
+  overflow: hidden;
+}
+.card-front.red {
+  color: #c81e1e;
+}
+.card-front.black {
+  color: #1d2743;
+}
+.card-corner {
+  position: absolute;
+  top: calc(var(--card-w) * 0.04);
+  left: calc(var(--card-w) * 0.08);
+  line-height: 1;
+  font-weight: 700;
+  font-size: calc(var(--card-w) * 0.3);
+  display: flex;
+  gap: calc(var(--card-w) * 0.03);
+}
+.card-corner span:last-child {
+  font-size: calc(var(--card-w) * 0.26);
+}
+.card-pip {
+  position: absolute;
+  right: calc(var(--card-w) * 0.06);
+  bottom: calc(var(--card-w) * 0.02);
+  font-size: calc(var(--card-w) * 0.62);
+  line-height: 1;
+}
+.card-back {
+  background: #2233b0
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.14) 0,
+      rgba(255, 255, 255, 0.14) 3px,
+      transparent 3px,
+      transparent 9px
+    );
+  border: calc(var(--card-w) * 0.045) solid #fff;
+  transform: rotateY(180deg);
+}
+
+/* ---- toolbar ---- */
+.toolbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-around;
+  gap: 8px;
+  padding: 10px max(12px, env(safe-area-inset-left)) max(14px, env(safe-area-inset-bottom));
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+}
+.toolbar button {
+  flex: 1;
+  max-width: 180px;
+  padding: 10px 0;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.toolbar button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.auto-chip {
+  position: fixed;
+  bottom: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.55);
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+/* ---- dialogs ---- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.dialog {
+  background: #fff;
+  color: #1c2430;
+  border-radius: 16px;
+  padding: 24px 28px;
+  width: min(92vw, 380px);
+  text-align: center;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+}
+.dialog h2 {
+  margin: 0 0 16px;
+  font-size: 1.5rem;
+}
+.dialog dl {
+  margin: 0 0 20px;
+}
+.dialog dl div {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #eceff3;
+}
+.dialog dt {
+  color: #5a6572;
+}
+.dialog dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.dialog .primary {
+  width: 100%;
+  padding: 12px 0;
+  border: 0;
+  border-radius: 10px;
+  background: var(--felt-light);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.win-suits {
+  font-size: 2rem;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.win-suits .red {
+  color: #c81e1e;
+}
+.win-suits .black {
+  color: #1d2743;
+}
