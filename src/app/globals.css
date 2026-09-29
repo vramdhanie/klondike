@@ -25,7 +25,7 @@ body {
 .board {
   max-width: 760px;
   margin: 0 auto;
-  padding: 8px 8px 96px;
+  padding: max(8px, env(safe-area-inset-top)) 8px 96px;
 }
 
 .board-loading {

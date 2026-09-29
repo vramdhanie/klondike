@@ -1,9 +1,9 @@
 "use client";
 
-import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, animate, LayoutGroup, motion, useMotionValue } from "motion/react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import CardView from "./Card";
+import CardView, { DRAG_Z } from "./Card";
 import StatsModal from "./StatsModal";
 import { SUIT_SYMBOL } from "@/lib/cards";
 import {
@@ -48,10 +48,14 @@ export default function Board() {
   const [elapsedMs, setElapsedMs] = useState(0);
   const [counted, setCounted] = useState(false);
   const [autoFinishing, setAutoFinishing] = useState(false);
-  // While dragging from a tableau column, its root is lifted above every
-  // other column so the dragged stack cannot pass underneath a neighbour.
-  const [dragCol, setDragCol] = useState<number | null>(null);
-  const dragColTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // A dragged tableau card leads; the rest of its stack follows these
+  // motion values (cards are flat siblings, so no nested gestures exist).
+  const followX = useMotionValue(0);
+  const followY = useMotionValue(0);
+  const [dragStack, setDragStack] = useState<{ col: number; row: number } | null>(null);
+  const dragClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Swallow any tap that lands right after a drag ends, board-wide.
+  const lastDragEndAt = useRef(0);
   const [shake, setShake] = useState<{ id: string; nonce: number } | null>(null);
   const [statsOpen, setStatsOpen] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -75,24 +79,14 @@ export default function Board() {
       const before = pileKeys(prev);
       const after = pileKeys(state);
       const batch = ++seqCounter.current;
-      const liftedColumns = new Set<number>();
       const moved: string[] = [];
       after.forEach((key, id) => {
-        if (before.get(id) !== key) {
-          moved.push(id);
-          if (key.startsWith("t")) liftedColumns.add(Number(key.slice(1)));
-        }
+        if (before.get(id) !== key) moved.push(id);
       });
       if (moved.length > 0) {
         setZMap((old) => {
           const next = new Map(old);
           moved.forEach((id) => next.set(id, batch));
-          // Lift the whole receiving column so cards in flight stay on top
-          // of neighbouring columns (cards nest inside their column root).
-          liftedColumns.forEach((i) => {
-            const root = state.tableau[i][0];
-            if (root) next.set(root.id, batch);
-          });
           return next;
         });
       }
@@ -131,6 +125,15 @@ export default function Board() {
     return () => clearInterval(t);
   }, [running]);
 
+  // Keep the saved game's clock current, so a reload doesn't lose idle time.
+  useEffect(() => {
+    if (!running || elapsedMs === 0 || elapsedMs % 5000 !== 0) return;
+    const current = gameRef.current;
+    if (current && !current.won) {
+      saveGame({ state: current, elapsedMs, counted });
+    }
+  }, [running, elapsedMs, counted]);
+
   const persist = useCallback((state: GameState, elapsed: number, isCounted: boolean) => {
     if (state.won) clearGame();
     else saveGame({ state, elapsedMs: elapsed, counted: isCounted });
@@ -153,6 +156,7 @@ export default function Board() {
 
   const handleTap = useCallback(
     (loc: TapLocation, cardId?: string) => {
+      if (Date.now() - lastDragEndAt.current < 350) return;
       const current = gameRef.current;
       if (!current || current.won || autoFinishing) return;
       const next = tapCard(current, loc);
@@ -166,13 +170,31 @@ export default function Board() {
     [autoFinishing, applyMove]
   );
 
+  const settleDragStack = useCallback(
+    (success: boolean) => {
+      if (dragClearTimer.current) clearTimeout(dragClearTimer.current);
+      if (success) {
+        followX.set(0);
+        followY.set(0);
+        setDragStack(null);
+      } else {
+        // Send the followers home alongside the lead card's snap-back.
+        animate(followX, 0, { type: "spring", stiffness: 500, damping: 38 });
+        animate(followY, 0, { type: "spring", stiffness: 500, damping: 38 });
+        dragClearTimer.current = setTimeout(() => setDragStack(null), 600);
+      }
+    },
+    [followX, followY]
+  );
+
   const handleDragEnd = useCallback(
     (from: DragSource, point: { x: number; y: number }) => {
-      // Keep the source column lifted through the snap-back animation.
-      if (dragColTimer.current) clearTimeout(dragColTimer.current);
-      dragColTimer.current = setTimeout(() => setDragCol(null), 600);
+      lastDragEndAt.current = Date.now();
       const current = gameRef.current;
-      if (!current || current.won || autoFinishing) return;
+      if (!current || current.won || autoFinishing) {
+        settleDragStack(false);
+        return;
+      }
       const x = point.x - window.scrollX;
       const y = point.y - window.scrollY;
       const hit = (el: HTMLDivElement | null) => {
@@ -187,11 +209,11 @@ export default function Board() {
       columnEls.current.forEach((el, i) => {
         if (!target && hit(el)) target = { kind: "tableau", index: i };
       });
-      if (!target) return; // snap back
-      const next = dragMove(current, from, target);
+      const next = target ? dragMove(current, from, target) : null;
+      settleDragStack(!!next);
       if (next) applyMove(current, next);
     },
-    [autoFinishing, applyMove]
+    [autoFinishing, applyMove, settleDragStack]
   );
 
   const undo = useCallback(() => {
@@ -211,6 +233,10 @@ export default function Board() {
     setZMap(new Map());
     seqCounter.current = 0;
     gameRef.current = null;
+    if (dragClearTimer.current) clearTimeout(dragClearTimer.current);
+    setDragStack(null);
+    followX.set(0);
+    followY.set(0);
     setGameNow(fresh);
     setElapsedMs(0);
     setCounted(false);
@@ -218,7 +244,7 @@ export default function Board() {
     setWinStats(null);
     wonHandled.current = false;
     clearGame();
-  }, [counted, setGameNow]);
+  }, [counted, setGameNow, followX, followY]);
 
   // Kick off the auto-finish when everything is uncovered.
   useEffect(() => {
@@ -267,45 +293,6 @@ export default function Board() {
   }
 
   const interactive = !game.won && !autoFinishing;
-
-  /** Build a tableau column as nested cards, so a drag carries the stack. */
-  const columnNodes = (pile: GameState["tableau"][number], col: number): ReactNode => {
-    let node: ReactNode = null;
-    for (let row = pile.length - 1; row >= 0; row--) {
-      const card = pile[row];
-      const below = pile[row - 1];
-      const top =
-        row === 0
-          ? "0px"
-          : `calc(var(--card-h) * ${(below.faceUp ? FU_OFFSET : FD_OFFSET).toFixed(2)})`;
-      const zBase = zOf(card.id, row);
-      node = (
-        <CardView
-          key={card.id}
-          card={card}
-          z={row === 0 && col === dragCol ? zBase + 10_000_000 : zBase}
-          top={top}
-          shaking={shake?.id === card.id}
-          draggable={card.faceUp && interactive}
-          onTap={
-            card.faceUp && interactive
-              ? () => handleTap({ pile: "tableau", index: col, cardIndex: row }, card.id)
-              : undefined
-          }
-          onDragBegin={() => {
-            if (dragColTimer.current) clearTimeout(dragColTimer.current);
-            setDragCol(col);
-          }}
-          onDragEnd={(pt) =>
-            handleDragEnd({ pile: "tableau", index: col, cardIndex: row }, pt)
-          }
-        >
-          {node}
-        </CardView>
-      );
-    }
-    return node;
-  };
 
   return (
     <div className="board">
@@ -379,18 +366,63 @@ export default function Board() {
         </div>
 
         <div className="tableau">
-          {game.tableau.map((pile, col) => (
-            <div
-              className="column"
-              key={`t${col}`}
-              ref={(el) => {
-                columnEls.current[col] = el;
-              }}
-            >
-              <div className="placeholder" />
-              {columnNodes(pile, col)}
-            </div>
-          ))}
+          {game.tableau.map((pile, col) => {
+            let offset = 0;
+            return (
+              <div
+                className="column"
+                key={`t${col}`}
+                ref={(el) => {
+                  columnEls.current[col] = el;
+                }}
+              >
+                <div className="placeholder" />
+                {pile.map((card, row) => {
+                  const top = `calc(var(--card-h) * ${offset.toFixed(2)})`;
+                  offset += card.faceUp ? FU_OFFSET : FD_OFFSET;
+                  const inStack =
+                    dragStack !== null && dragStack.col === col && row >= dragStack.row;
+                  return (
+                    <CardView
+                      key={card.id}
+                      card={card}
+                      z={inStack ? DRAG_Z + row : zOf(card.id, row)}
+                      top={top}
+                      shaking={shake?.id === card.id}
+                      draggable={card.faceUp && interactive}
+                      follow={
+                        inStack && row > dragStack.row
+                          ? { x: followX, y: followY }
+                          : undefined
+                      }
+                      onTap={
+                        card.faceUp && interactive
+                          ? () =>
+                              handleTap(
+                                { pile: "tableau", index: col, cardIndex: row },
+                                card.id
+                              )
+                          : undefined
+                      }
+                      onDragBegin={() => {
+                        if (dragClearTimer.current) clearTimeout(dragClearTimer.current);
+                        followX.set(0);
+                        followY.set(0);
+                        setDragStack({ col, row });
+                      }}
+                      onDragMove={(off) => {
+                        followX.set(off.x);
+                        followY.set(off.y);
+                      }}
+                      onDragEnd={(pt) =>
+                        handleDragEnd({ pile: "tableau", index: col, cardIndex: row }, pt)
+                      }
+                    />
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
       </LayoutGroup>
 

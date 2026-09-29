@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "motion/react";
-import { type ReactNode, useRef, useState } from "react";
+import { motion, type MotionValue, type PanInfo } from "motion/react";
+import { useRef, useState } from "react";
 
 import { type Card as CardType, isRed, RANK_LABEL, SUIT_SYMBOL } from "@/lib/cards";
 
@@ -13,13 +13,14 @@ interface Props {
   draggable?: boolean;
   onTap?: () => void;
   onDragBegin?: () => void;
+  onDragMove?: (offset: { x: number; y: number }) => void;
   onDragEnd?: (point: { x: number; y: number }) => void;
-  /** Cards stacked on this one in a tableau column, so drags carry them. */
-  children?: ReactNode;
+  /** Bound while this card is part of a dragged stack; follows the lead. */
+  follow?: { x: MotionValue<number>; y: MotionValue<number> };
 }
 
 /** Above every move-sequence z, so a dragged card clears all piles. */
-const DRAG_Z = 10_000_000;
+export const DRAG_Z = 10_000_000;
 
 export default function Card({
   card,
@@ -29,8 +30,9 @@ export default function Card({
   draggable = false,
   onTap,
   onDragBegin,
+  onDragMove,
   onDragEnd,
-  children,
+  follow,
 }: Props) {
   const [dragging, setDragging] = useState(false);
   // Motion's tap gesture is not reliably cancelled by its drag gesture, so
@@ -45,9 +47,9 @@ export default function Card({
       layoutId={card.id}
       layout
       transition={{ type: "spring", stiffness: 500, damping: 38 }}
-      animate={shaking ? { x: [0, -7, 7, -5, 5, 0] } : { x: 0 }}
+      animate={shaking ? { x: [0, -7, 7, -5, 5, 0] } : undefined}
       className="card-slot"
-      style={{ top: top ?? 0, zIndex: dragging ? DRAG_Z : z }}
+      style={{ top: top ?? 0, zIndex: dragging ? DRAG_Z : z, x: follow?.x, y: follow?.y }}
       drag={draggable}
       dragSnapToOrigin
       dragMomentum={false}
@@ -57,10 +59,10 @@ export default function Card({
         setDragging(true);
         onDragBegin?.();
       }}
-      onDragEnd={(_e, info) => onDragEnd?.(info.point)}
+      onDrag={(_e: unknown, info: PanInfo) => onDragMove?.(info.offset)}
+      onDragEnd={(_e: unknown, info: PanInfo) => onDragEnd?.(info.point)}
       onDragTransitionEnd={() => setDragging(false)}
-      onPointerDown={(e) => {
-        e.stopPropagation();
+      onPointerDown={() => {
         draggedRef.current = false;
       }}
       onTap={
@@ -87,7 +89,6 @@ export default function Card({
         </div>
         <div className="card-face card-back" />
       </motion.div>
-      {children}
     </motion.div>
   );
 }
