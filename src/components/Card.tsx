@@ -3,7 +3,8 @@
 import { motion, type MotionValue, type PanInfo } from "motion/react";
 import { useRef, useState } from "react";
 
-import { type Card as CardType, isRed, RANK_LABEL, SUIT_SYMBOL } from "@/lib/cards";
+import SuitIcon from "./Suit";
+import { type Card as CardType, isRed, RANK_LABEL } from "@/lib/cards";
 
 interface Props {
   card: CardType;
@@ -39,7 +40,6 @@ export default function Card({
   // a drag could also fire onTap and apply a second move. Track per-gesture.
   const draggedRef = useRef(false);
   const red = isRed(card.suit);
-  const symbol = SUIT_SYMBOL[card.suit];
   const label = RANK_LABEL[card.rank];
 
   return (
@@ -83,9 +83,11 @@ export default function Card({
         <div className={`card-face card-front ${red ? "red" : "black"}`}>
           <div className="card-corner">
             <span>{label}</span>
-            <span>{symbol}</span>
+            <SuitIcon suit={card.suit} className="corner-suit" />
           </div>
-          <div className="card-pip">{symbol}</div>
+          <div className="card-pip">
+            <SuitIcon suit={card.suit} className="pip-suit" />
+          </div>
         </div>
         <div className="card-face card-back" />
       </motion.div>

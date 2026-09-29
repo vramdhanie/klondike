@@ -136,16 +136,18 @@ body {
 }
 .card-corner {
   position: absolute;
-  top: calc(var(--card-w) * 0.04);
+  top: calc(var(--card-w) * 0.05);
   left: calc(var(--card-w) * 0.08);
   line-height: 1;
   font-weight: 700;
   font-size: calc(var(--card-w) * 0.3);
   display: flex;
-  gap: calc(var(--card-w) * 0.03);
+  align-items: center;
+  gap: calc(var(--card-w) * 0.05);
 }
-.card-corner span:last-child {
-  font-size: calc(var(--card-w) * 0.26);
+.corner-suit {
+  width: calc(var(--card-w) * 0.24);
+  height: calc(var(--card-w) * 0.24);
 }
 /* The big pip sits centred in the space left under the corner label. */
 .card-pip {
@@ -154,19 +156,25 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--card-w) * 0.62);
-  line-height: 1;
+}
+.pip-suit {
+  width: calc(var(--card-w) * 0.52);
+  height: calc(var(--card-w) * 0.52);
 }
 @media (max-width: 600px) {
   .card-corner {
     font-size: calc(var(--card-w) * 0.38);
   }
-  .card-corner span:last-child {
-    font-size: calc(var(--card-w) * 0.34);
+  .corner-suit {
+    width: calc(var(--card-w) * 0.3);
+    height: calc(var(--card-w) * 0.3);
   }
   .card-pip {
-    inset: calc(var(--card-w) * 0.46) 0 0 0;
-    font-size: calc(var(--card-w) * 0.56);
+    inset: calc(var(--card-w) * 0.5) 0 0 0;
+  }
+  .pip-suit {
+    width: calc(var(--card-w) * 0.48);
+    height: calc(var(--card-w) * 0.48);
   }
 }
 .card-back {
